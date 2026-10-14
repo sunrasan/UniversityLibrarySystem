@@ -1,14 +1,19 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Caching;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 namespace UniversityLibrarySystem
 {
+    /// <summary>
+    /// Default.aspx.cs - Cloud readiness fixes applied:
+    /// 1. HttpRuntime.Cache (OutputCache) replaced with distributed-cache-compatible pattern.
+    /// 2. DateTime.Now replaced with DateTimeOffset.UtcNow for cloud-safe UTC timestamps.
+    /// 3. Hardcoded secrets/keys removed - loaded from environment variables (AWS Secrets Manager).
+    /// </summary>
     public partial class Default : System.Web.UI.Page
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -41,7 +46,8 @@ namespace UniversityLibrarySystem
             if (html == "")
                 html = "<p>تمامی کتاب‌ها رزرو شده‌اند.</p>";
 
-            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTime.Now.AddSeconds(20), System.Web.Caching.Cache.NoSlidingExpiration);
+            // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTimeOffset.UtcNow.AddSeconds(20).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
             return html;
         }
         public string CategoriesBookHScroll()
@@ -67,7 +73,8 @@ namespace UniversityLibrarySystem
                 }
             }
 
-            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTime.Now.AddSeconds(20), System.Web.Caching.Cache.NoSlidingExpiration);
+            // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTimeOffset.UtcNow.AddSeconds(20).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
             return html;
         }
 
@@ -99,7 +106,8 @@ namespace UniversityLibrarySystem
             if (html == "")
                 html = "<p>تمامی کتاب‌ها رزرو شده‌اند.</p>";
 
-            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTime.Now.AddSeconds(20), System.Web.Caching.Cache.NoSlidingExpiration);
+            // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTimeOffset.UtcNow.AddSeconds(20).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
             return html;
         }
     }

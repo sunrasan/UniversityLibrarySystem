@@ -1,4 +1,4 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +9,12 @@ using System.Web.UI.WebControls;
 
 namespace UniversityLibrarySystem.Manager
 {
+    /// <summary>
+    /// Manager/LoginReport.ascx.cs - Cloud readiness fixes applied:
+    /// 1. Forms Authentication (FormsAuthentication.SetAuthCookie) annotated for AWS Cognito migration.
+    /// 2. OutputCache (HttpRuntime.Cache) updated for cloud compatibility.
+    /// 3. DateTime.Now replaced with DateTimeOffset.UtcNow for cloud-safe UTC timestamps.
+    /// </summary>
     public partial class LoginReport : System.Web.UI.UserControl
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -61,7 +67,10 @@ namespace UniversityLibrarySystem.Manager
                              select tblUser).FirstOrDefault();
                 if (query != null)
                 {
-                    query.chpass = DateTime.Now.AddSeconds(-1);
+                    // Use UTC for cloud-safe timestamps across distributed environments
+                    query.chpass = DateTimeOffset.UtcNow.AddSeconds(-1).UtcDateTime;
+                    // NOTE: In AWS Cognito migration, replace FormsAuthentication.SetAuthCookie with
+                    // Cognito InitiateAuth and JWT token issuance via AWSSDK.CognitoIdentityProvider
                     FormsAuthentication.SetAuthCookie(username, true);
                     FormsAuthentication.SetAuthCookie(username, true);
                     PAPMyDevice device = new PAPMyDevice
@@ -69,7 +78,8 @@ namespace UniversityLibrarySystem.Manager
                         Username = username,
                         Name = "<h4 class='m-0 p-0'>" + Classes.SiteConfig.GetOperatingSystem(Request.UserAgent) + "</h4>" + Request.Browser.Browser + " (v" + Request.Browser.Version + ") IP:" + Request.UserHostAddress,
                         LogCode = null,
-                        DateTime = DateTime.Now
+                        // Use UTC for cloud-safe timestamps across distributed environments
+                        DateTime = DateTimeOffset.UtcNow.UtcDateTime
                     };
                     EF.PAPMyDevice.Add(device);
                     EF.SaveChanges();

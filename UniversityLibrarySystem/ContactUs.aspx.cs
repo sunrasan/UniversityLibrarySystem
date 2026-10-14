@@ -67,7 +67,7 @@ namespace UniversityLibrarySystem
                 </div>
             </div>";
                     }
-                    HttpRuntime.Cache.Insert("GetContactUSPage", html, null, DateTime.Now.AddMinutes(5), System.Web.Caching.Cache.NoSlidingExpiration);
+                    HttpRuntime.Cache.Insert("GetContactUSPage", html, null, DateTimeOffset.UtcNow.AddMinutes(5).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                 }
                 else
                 {

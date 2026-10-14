@@ -290,7 +290,7 @@ namespace UniversityLibrarySystem.Manager
                     ULSTbl_Categories TG = new ULSTbl_Categories()
                     {
                         UserNameAdder = UserId,
-                        DateInsert = DateTime.Now,
+                        DateInsert = DateTimeOffset.UtcNow.UtcDateTime,
                         PicName = PicName,
                         Status = Status,
                         Title = txtTitle.Value,

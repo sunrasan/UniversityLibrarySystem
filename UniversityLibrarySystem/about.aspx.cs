@@ -27,7 +27,7 @@ namespace UniversityLibrarySystem
                     {
                         var qGetAbout = (from item in EF.ULSTbl_SiteSetting
                                          select new {item.AboutUs}).FirstOrDefault();
-                        HttpRuntime.Cache.Insert("AboutUS", qGetAbout.AboutUs, null, DateTime.Now.AddMinutes(5), System.Web.Caching.Cache.NoSlidingExpiration);
+                        HttpRuntime.Cache.Insert("AboutUS", qGetAbout.AboutUs, null, DateTimeOffset.UtcNow.AddMinutes(5).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                         return qGetAbout.AboutUs;
                     }
                 }

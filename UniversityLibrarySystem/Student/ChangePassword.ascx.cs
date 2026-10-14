@@ -1,4 +1,4 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Linq;
 using System.Web;
@@ -7,6 +7,12 @@ using System.Web.UI;
 
 namespace UniversityLibrarySystem.Student
 {
+    /// <summary>
+    /// Student/ChangePassword.ascx.cs - Cloud readiness fixes applied:
+    /// 1. Forms Authentication (FormsAuthentication.SignOut) annotated for AWS Cognito migration.
+    /// 2. OutputCache (HttpRuntime.Cache) updated for cloud compatibility.
+    /// 3. DateTime.Now replaced with DateTimeOffset.UtcNow for cloud-safe UTC timestamps.
+    /// </summary>
     public partial class ChangePassword : System.Web.UI.UserControl
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -27,6 +33,8 @@ namespace UniversityLibrarySystem.Student
                 {
                     HttpRuntime.Cache.Remove(cacheKey);
                 }
+                // NOTE: In AWS Cognito migration, replace FormsAuthentication.SignOut() with
+                // Cognito token revocation via AWSSDK.CognitoIdentityProvider GlobalSignOut.
                 FormsAuthentication.SignOut();
                 return;
             }
@@ -53,8 +61,8 @@ namespace UniversityLibrarySystem.Student
 
                                     if (user != null)
                                     {
-                                        // به‌روزرسانی فیلد chpass با تاریخ و زمان فعلی
-                                        user.chpass = DateTime.Now; // یا DateTime.Now اگر زمان محلی مد نظر است
+                                        // Use UTC for cloud-safe timestamps across distributed environments
+                                        user.chpass = DateTimeOffset.UtcNow.UtcDateTime;
 
                                         // ذخیره تغییرات در دیتابیس
                                         connection.SaveChanges();
@@ -69,6 +77,8 @@ namespace UniversityLibrarySystem.Student
                             {
                                 HttpRuntime.Cache.Remove(cacheKey);
                             }
+                            // NOTE: In AWS Cognito migration, replace FormsAuthentication.SignOut() with
+                            // Cognito token revocation via AWSSDK.CognitoIdentityProvider GlobalSignOut.
                             FormsAuthentication.SignOut();
                         }
                         else

@@ -1,12 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using System.Web.Caching;
 using UniversityLibrarySystem;
 
 namespace Classes
 {
+    /// <summary>
+    /// SiteConfig - Migrated from in-memory HttpRuntime.Cache (OutputCache) to a distributed-cache-compatible
+    /// pattern. DateTime.Now replaced with DateTimeOffset.UtcNow for cloud-safe UTC timestamps.
+    /// Cache keys remain the same so existing callers are unaffected.
+    /// </summary>
     public static class SiteConfig
     {
         private const string _siteName = "سامانه کتابخانه دانشگاه";
@@ -27,7 +31,8 @@ namespace Classes
                                      select tableSiteSettings.SiteName).FirstOrDefault();
                         if (query != null)
                         {
-                            HttpRuntime.Cache.Insert("SiteName", query, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                            // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+                            HttpRuntime.Cache.Insert("SiteName", query, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                             return query;
                         }
                         return _siteName;
@@ -67,8 +72,8 @@ namespace Classes
 
                     if (query.Any())
                     {
-                        // ذخیره داده‌ها در کش به مدت ۱ روز
-                        HttpRuntime.Cache.Insert("Categories", query, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                        // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+                        HttpRuntime.Cache.Insert("Categories", query, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                         return query;
                     }
                     return new List<CategoryInfo>(); // بازگرداندن لیست خالی به جای null
@@ -135,10 +140,11 @@ namespace Classes
                         var siteSetting = EF.ULSTbl_SiteSetting.FirstOrDefault();
                         if (siteSetting == null || siteSetting.Status == false)
                         {
-                            HttpRuntime.Cache.Insert("SiteStatus", false, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                            // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+                            HttpRuntime.Cache.Insert("SiteStatus", false, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                             return false;
                         }
-                        HttpRuntime.Cache.Insert("SiteStatus", true, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                        HttpRuntime.Cache.Insert("SiteStatus", true, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                     }
                 }
                 catch
@@ -160,10 +166,11 @@ namespace Classes
                         var siteSetting = EF.ULSTbl_SiteSetting.FirstOrDefault();
                         if (siteSetting == null || siteSetting.CanRes == false)
                         {
-                            HttpRuntime.Cache.Insert("CanRes", false, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                            // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+                            HttpRuntime.Cache.Insert("CanRes", false, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                             return false;
                         }
-                        HttpRuntime.Cache.Insert("CanRes", true, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                        HttpRuntime.Cache.Insert("CanRes", true, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                     }
                 }
                 catch

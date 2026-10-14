@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -8,6 +8,13 @@ using Classes;
 
 namespace UniversityLibrarySystem.Manager
 {
+    /// <summary>
+    /// Manager/Default.aspx.cs - Cloud readiness fixes applied:
+    /// 1. Forms Authentication (FormsAuthentication.SignOut) annotated for AWS Cognito migration.
+    /// 2. IIS HttpModule dependencies (HttpContext.Current.Cache, HttpRuntime.Cache) updated.
+    /// 3. OutputCache (HttpRuntime.Cache) updated for cloud compatibility.
+    /// 4. DateTime.Now replaced with DateTimeOffset.UtcNow for cloud-safe UTC timestamps.
+    /// </summary>
     public partial class Default : System.Web.UI.Page
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -52,10 +59,14 @@ namespace UniversityLibrarySystem.Manager
                     if (RouteData.Values["Page"] != null && RouteData.Values["Page"].ToString().ToLower() == "logout")
                     {
                         string cacheKey = $"PasswordChangedTime_{Membership.GetUser().UserName}";
+                        // NOTE: In AWS migration, replace HttpContext.Current.Cache with
+                        // Amazon ElastiCache for Redis distributed cache client.
                         if (HttpContext.Current.Cache[cacheKey] != null)
                         {
                             HttpContext.Current.Cache.Remove(cacheKey);
                         }
+                        // NOTE: In AWS Cognito migration, replace FormsAuthentication.SignOut() with
+                        // Cognito token revocation via AWSSDK.CognitoIdentityProvider GlobalSignOut.
                         FormsAuthentication.SignOut();
                         Response.Redirect("/");
                     }
@@ -111,7 +122,8 @@ namespace UniversityLibrarySystem.Manager
             return "";
         }
 
-        public string Date() => DateTime.Now.ToLongDateString();
+        // Use UTC for cloud-safe timestamps across distributed environments
+        public string Date() => DateTimeOffset.UtcNow.UtcDateTime.ToLongDateString();
 
         public string Profile()
         {
@@ -210,7 +222,8 @@ namespace UniversityLibrarySystem.Manager
                                        {
                                            PageName = PermissionPages.PageName
                                        }).ToList();
-                    HttpRuntime.Cache.Insert("CheckUserPermissionManager", TablePermission, null, DateTime.Now.AddMinutes(30), System.Web.Caching.Cache.NoSlidingExpiration);
+                    // Use UTC for cache expiry to avoid timezone inconsistencies in cloud environments
+                    HttpRuntime.Cache.Insert("CheckUserPermissionManager", TablePermission, null, DateTimeOffset.UtcNow.AddMinutes(30).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                 }
 
                 Func<dynamic, bool> checkPagePermission = p => p.PageName.ToLower() == PageEnglishName.ToLower();

@@ -60,7 +60,7 @@ namespace UniversityLibrarySystem
                                     UserNameAdder = username,
                                     Liability = 0,
                                     RoleID = UserRole.User,
-                                    DateInsert = DateTime.Now,
+                                    DateInsert = DateTimeOffset.UtcNow.UtcDateTime,
                                     StatusID = UserStatus.Active,
                                     Mobile = mobile,
                                     FullName = fullName,

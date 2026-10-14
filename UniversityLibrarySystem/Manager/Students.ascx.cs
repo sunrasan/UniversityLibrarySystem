@@ -268,7 +268,7 @@ namespace UniversityLibrarySystem.Manager
                             ULSTbl_Users TG = new ULSTbl_Users()
                             {
                                 UserNameAdder = UserId,
-                                DateInsert = DateTime.Now,
+                                DateInsert = DateTimeOffset.UtcNow.UtcDateTime,
                                 PicName = PicName,
                                 StatusID = Status ? UserStatus.Active : UserStatus.Deactive,
                                 Email = txtEmail.Value,

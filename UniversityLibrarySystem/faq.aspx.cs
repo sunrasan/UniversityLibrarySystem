@@ -38,7 +38,7 @@ namespace UniversityLibrarySystem
             </div>";
                         }
 
-                        HttpRuntime.Cache.Insert("FaqPageCache", text, null, DateTime.Now.AddMinutes(3), System.Web.Caching.Cache.NoSlidingExpiration);
+                        HttpRuntime.Cache.Insert("FaqPageCache", text, null, DateTimeOffset.UtcNow.AddMinutes(3).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                     }
                 }
                 return text;

@@ -352,7 +352,7 @@ namespace UniversityLibrarySystem.Manager
                                 {
                                     CategoryId = int.Parse(drpCategory.SelectedValue),
                                     PicName = PicName,
-                                    DateInsert = DateTime.Now,
+                                    DateInsert = DateTimeOffset.UtcNow.UtcDateTime,
                                     Status = Status,
                                     UserNameAdder = UserId,
                                     IsSpecial = Special,

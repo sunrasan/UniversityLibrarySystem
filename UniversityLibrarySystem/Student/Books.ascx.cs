@@ -117,7 +117,7 @@ namespace UniversityLibrarySystem.Student
                                     x.PicName,
                                     ResTempStartDate = x.ReserveStartDate != null ? ConvertToPersianDate(x.ReserveStartDate) : "--",
                                     ResTempEndDate = x.ReserveEndDate != null ? ConvertToPersianDate(x.ReserveEndDate) : "--",
-                                    BookFine = x.Status != 3 ? "--" : getLiability == null ? "خطا در محاسبه" : ((DateTime.Now - (DateTime)x.ReserveEndDate)).Days * getLiability + "ريال",
+                                    BookFine = x.Status != 3 ? "--" : getLiability == null ? "خطا در محاسبه" : ((DateTimeOffset.UtcNow.UtcDateTime - (DateTime)x.ReserveEndDate)).Days * getLiability + "ريال",
                                     StatusHtml = ReserveStatus.badgeStatus(x.Status),
                                     x.Renewal,
                                     x.CatName,

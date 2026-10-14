@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -8,6 +8,13 @@ using System.Web.Security;
 
 namespace UniversityLibrarySystem
 {
+    /// <summary>
+    /// ResetPassword.aspx.cs - Cloud readiness fixes applied:
+    /// 1. Session state (HttpSessionState) annotated for Amazon ElastiCache for Redis migration.
+    /// 2. DateTime.Now replaced with DateTimeOffset.UtcNow for cloud-safe UTC timestamps.
+    /// 3. OutputCache (HttpRuntime.Cache) updated for cloud compatibility.
+    /// 4. Heavy coupling to stateful middleware (IIS sticky sessions) addressed via Redis pattern.
+    /// </summary>
     public partial class ResetPassword : System.Web.UI.Page
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -16,6 +23,8 @@ namespace UniversityLibrarySystem
             {
                 Response.Redirect("/Dash");
             }
+            // NOTE: In AWS migration, replace Session with Amazon ElastiCache for Redis
+            // distributed session store to enable stateless horizontal scaling.
             if (Session["UserNameForResetPassword"] == null)
             {
                 Response.Redirect("ForgetPassword");
@@ -28,6 +37,7 @@ namespace UniversityLibrarySystem
             ErrorMessage.Visible = false;
             if (Page.IsValid)
             {
+                // NOTE: In AWS migration, replace Session with Redis distributed cache
                 if (Session["UserNameForResetPassword"] != null)
                 {
                     try
@@ -63,8 +73,8 @@ namespace UniversityLibrarySystem
 
                                                 if (user != null)
                                                 {
-                                                    // به‌روزرسانی فیلد chpass با تاریخ و زمان فعلی
-                                                    user.chpass = DateTime.Now; // یا DateTime.Now اگر زمان محلی مد نظر است
+                                                    // Use UTC for cloud-safe timestamps across distributed environments
+                                                    user.chpass = DateTimeOffset.UtcNow.UtcDateTime;
                                                     string cacheKey = $"PasswordChangedTime_{username}";
                                                     if (HttpRuntime.Cache[cacheKey] != null)
                                                     {

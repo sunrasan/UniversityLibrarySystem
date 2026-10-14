@@ -1,4 +1,4 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Linq;
 using System.Web;
@@ -9,7 +9,11 @@ using System.Web.UI;
 
 namespace UniversityLibrarySystem
 {
-
+    /// <summary>
+    /// Login.aspx.cs - Cloud readiness fixes applied:
+    /// 1. Forms Authentication (FormsAuthentication.SetAuthCookie) annotated for AWS Cognito migration.
+    /// 2. DateTime.Now replaced with DateTimeOffset.UtcNow for cloud-safe UTC timestamps.
+    /// </summary>
     public partial class Login : Page
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -46,13 +50,16 @@ namespace UniversityLibrarySystem
                             {
                                 if (queryGetUser.StatusID == UserStatus.Active)
                                 {
+                                    // NOTE: In AWS Cognito migration, replace FormsAuthentication.SetAuthCookie
+                                    // with Cognito InitiateAuth and JWT token issuance via AWSSDK.CognitoIdentityProvider
                                     FormsAuthentication.SetAuthCookie(username, true);
                                     PAPMyDevice device = new PAPMyDevice
                                     {
                                         Username = username,
                                         Name = "<h4 class='m-0 p-0'>" + Classes.SiteConfig.GetOperatingSystem(Request.UserAgent) + "</h4>"+Request.Browser.Browser + " (v" + Request.Browser.Version+") IP:"+ Request.UserHostAddress,
                                         LogCode = null,
-                                        DateTime = DateTime.Now
+                                        // Use UTC for cloud-safe timestamps across distributed environments
+                                        DateTime = DateTimeOffset.UtcNow.UtcDateTime
                                     };
                                     libraryDBEntities.PAPMyDevice.Add(device);
                                     libraryDBEntities.SaveChanges();

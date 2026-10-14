@@ -1,14 +1,26 @@
-﻿using System.Net.Http;
+using System;
+using System.Net.Http;
 using System.Text.Json;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Classes
 {
+    /// <summary>
+    /// SmsSender - URLs externalized to AWS Systems Manager Parameter Store.
+    /// Load SMS API URL and key from environment variables or AWS SSM Parameter Store at runtime.
+    /// </summary>
     public class SmsSender
     {
-        private readonly string apiKey="";
-        private readonly string apiUrl = "https://api.sms.ir/v1/send";
+        private readonly string apiKey;
+        private readonly string apiUrl;
+
+        public SmsSender()
+        {
+            // Load from environment variables (set from AWS SSM Parameter Store at startup)
+            this.apiKey = Environment.GetEnvironmentVariable("SMS_API_KEY") ?? "";
+            this.apiUrl = Environment.GetEnvironmentVariable("SMS_API_URL") ?? "https://api.sms.ir/v1/send";
+        }
 
         public async Task<string> SendSmsAsync(string phoneNumber, string message)
         {
@@ -34,8 +46,9 @@ namespace Classes
         }
 
         /*
-        string apiKey = "YourApiKey";
-        SmsSender smsSender = new SmsSender(apiKey);
+        SmsSender smsSender = new SmsSender();
+        // SMS_API_KEY and SMS_API_URL are loaded from environment variables
+        // which are populated from AWS SSM Parameter Store at application startup.
 
         string phoneNumber = "09123456789";
         string message = "Hello, this is a test message.";
@@ -47,11 +60,13 @@ namespace Classes
     public class SmsIr
     {
         private readonly string apiKey;
-        private readonly string apiUrl = "https://api.sms.ir/v1/send/verify";
+        private readonly string apiUrl;
 
         public SmsIr(string apiKey)
         {
             this.apiKey = apiKey;
+            // Load verify URL from environment variable (set from AWS SSM Parameter Store)
+            this.apiUrl = Environment.GetEnvironmentVariable("SMS_VERIFY_API_URL") ?? "https://api.sms.ir/v1/send/verify";
         }
 
         public async Task<string> SendVerifyAsync(string mobile, int templateId, VerifySendParameterModel[] parameters)
@@ -79,7 +94,7 @@ namespace Classes
         }
     }
     /*
-            string apiKey = "YourApiKey";
+            string apiKey = Environment.GetEnvironmentVariable("SMS_API_KEY");
             SmsIr smsIr = new SmsIr(apiKey);
 
             string mobile = "9120000000";

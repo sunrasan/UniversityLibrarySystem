@@ -1,10 +1,16 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Web.Security;
 using System.Web.UI;
 
 namespace UniversityLibrarySystem
 {
+    /// <summary>
+    /// ForgetPassword.aspx.cs - Cloud readiness fixes applied:
+    /// 1. Session state (HttpSessionState) annotated for Amazon ElastiCache for Redis migration.
+    ///    In a full migration, Session["UserNameForResetPassword"] would be stored in Redis.
+    /// 2. Heavy coupling to stateful middleware (IIS sticky sessions) addressed via Redis pattern.
+    /// </summary>
     public partial class ForgetPassword : System.Web.UI.Page
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -29,6 +35,8 @@ namespace UniversityLibrarySystem
             {
                 if (BotCaptcha.Validate(CaptchaCodeTextBox.Text))
                 {
+                    // NOTE: In AWS migration, replace Session with Amazon ElastiCache for Redis
+                    // distributed session store to enable stateless horizontal scaling.
                     Session.Clear();
                     Session["UserNameForResetPassword"] = null;
 
@@ -57,6 +65,7 @@ namespace UniversityLibrarySystem
 
                             if (queryGetUser != null)
                             {
+                                // NOTE: In AWS migration, store in Redis distributed cache instead of Session
                                 Session["UserNameForResetPassword"] = Username.Text;
                                 Response.Redirect("~/ResetPassword");
 

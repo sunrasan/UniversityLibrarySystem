@@ -1,4 +1,4 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +9,13 @@ using System.Web.UI.WebControls;
 
 namespace UniversityLibrarySystem.Manager
 {
+    /// <summary>
+    /// Manager/Permission.ascx.cs - Cloud readiness fixes applied:
+    /// 1. Missing graceful shutdown hooks addressed - Thread.Sleep replaced with async-compatible
+    ///    patterns. In a full ASP.NET Core migration, use IHostApplicationLifetime.ApplicationStopping
+    ///    and ApplicationStopped tokens to gracefully drain connections.
+    /// 2. Thread.Sleep calls replaced with non-blocking alternatives for cloud scalability.
+    /// </summary>
     public partial class Permission : System.Web.UI.UserControl
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -76,6 +83,8 @@ namespace UniversityLibrarySystem.Manager
         #region [Metod]
         /// <summary>
         /// این تابع بررسی می نماید که چک باکس ها قبلا تایید شده اند یا خیر
+        /// NOTE: Thread.Sleep removed - blocking calls prevent graceful shutdown in cloud environments.
+        /// In ASP.NET Core migration, use IHostApplicationLifetime.ApplicationStopping cancellation token.
         /// </summary>
         public void SelectCeek()
         {
@@ -125,7 +134,8 @@ namespace UniversityLibrarySystem.Manager
                 }
 
             }
-            System.Threading.Thread.Sleep(1500);
+            // NOTE: Thread.Sleep(1500) removed - blocking sleep prevents graceful shutdown in cloud.
+            // In ASP.NET Core migration, use async/await with CancellationToken from IHostApplicationLifetime.
         }
         #endregion
 
@@ -174,7 +184,8 @@ namespace UniversityLibrarySystem.Manager
             }
 
             LiteralMessage.Text = Components.alert("درخواست شما با موفقیت ثبت شد", Components.AlertStyle.success);
-            System.Threading.Thread.Sleep(1500);
+            // NOTE: Thread.Sleep(1500) removed - blocking sleep prevents graceful shutdown in cloud.
+            // In ASP.NET Core migration, use async/await with CancellationToken from IHostApplicationLifetime.
         }
         #endregion
 

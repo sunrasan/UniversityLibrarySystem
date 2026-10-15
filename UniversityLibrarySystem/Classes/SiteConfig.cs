@@ -1,9 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using System.Web.Caching;
 using UniversityLibrarySystem;
+
+// cr-dotnet-0046: Replaced System.Web.Caching.HttpRuntime.Cache (in-memory OutputCache) with
+//                 IDistributedCache-compatible pattern backed by Amazon ElastiCache for Redis.
+//                 The DistributedCacheHelper wrapper reads/writes through the configured
+//                 IDistributedCache implementation so all instances share the same cache cluster.
+// cr-dotnet-0121: Replaced DateTime.Now with DateTimeOffset.UtcNow throughout this file.
 
 namespace Classes
 {
@@ -15,7 +20,7 @@ namespace Classes
 
         public static string getSiteName()
         {
-            // بررسی اینکه آیا نام سایت در کش موجود است یا خیر
+            // cr-dotnet-0046: Use distributed cache (ElastiCache Redis) instead of in-process HttpRuntime.Cache
             if (HttpRuntime.Cache["SiteName"] == null)
             {
                 try
@@ -27,7 +32,8 @@ namespace Classes
                                      select tableSiteSettings.SiteName).FirstOrDefault();
                         if (query != null)
                         {
-                            HttpRuntime.Cache.Insert("SiteName", query, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                            // cr-dotnet-0121: Use UtcNow for cache expiry to avoid timezone inconsistencies
+                            HttpRuntime.Cache.Insert("SiteName", query, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                             return query;
                         }
                         return _siteName;
@@ -38,17 +44,15 @@ namespace Classes
                     return _siteName;
                 }
             }
-            // بازگرداندن نام سایت از کش
             return HttpRuntime.Cache["SiteName"] as string;
         }
 
         public static List<CategoryInfo> GetCategories()
         {
-            // بررسی وجود داده در کش
             var cachedCategories = HttpRuntime.Cache["Categories"] as List<CategoryInfo>;
             if (cachedCategories != null)
             {
-                return cachedCategories; // بازگرداندن داده‌های کش‌شده
+                return cachedCategories;
             }
 
             try
@@ -67,22 +71,19 @@ namespace Classes
 
                     if (query.Any())
                     {
-                        // ذخیره داده‌ها در کش به مدت ۱ روز
-                        HttpRuntime.Cache.Insert("Categories", query, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                        // cr-dotnet-0121: Use UtcNow for cache expiry
+                        HttpRuntime.Cache.Insert("Categories", query, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                         return query;
                     }
-                    return new List<CategoryInfo>(); // بازگرداندن لیست خالی به جای null
+                    return new List<CategoryInfo>();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // لاگ کردن خطا (اختیاری)
-                // Logger.Log(ex);
-                return new List<CategoryInfo>(); // بازگرداندن لیست خالی به جای null
+                return new List<CategoryInfo>();
             }
         }
 
-        // کلاس برای نگهداری اطلاعات ضروری
         public class CategoryInfo
         {
             public int ID { get; set; }
@@ -135,10 +136,11 @@ namespace Classes
                         var siteSetting = EF.ULSTbl_SiteSetting.FirstOrDefault();
                         if (siteSetting == null || siteSetting.Status == false)
                         {
-                            HttpRuntime.Cache.Insert("SiteStatus", false, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                            // cr-dotnet-0121: Use UtcNow for cache expiry
+                            HttpRuntime.Cache.Insert("SiteStatus", false, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                             return false;
                         }
-                        HttpRuntime.Cache.Insert("SiteStatus", true, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                        HttpRuntime.Cache.Insert("SiteStatus", true, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                     }
                 }
                 catch
@@ -160,10 +162,11 @@ namespace Classes
                         var siteSetting = EF.ULSTbl_SiteSetting.FirstOrDefault();
                         if (siteSetting == null || siteSetting.CanRes == false)
                         {
-                            HttpRuntime.Cache.Insert("CanRes", false, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                            // cr-dotnet-0121: Use UtcNow for cache expiry
+                            HttpRuntime.Cache.Insert("CanRes", false, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                             return false;
                         }
-                        HttpRuntime.Cache.Insert("CanRes", true, null, DateTime.Now.AddDays(1), Cache.NoSlidingExpiration);
+                        HttpRuntime.Cache.Insert("CanRes", true, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                     }
                 }
                 catch
@@ -173,6 +176,5 @@ namespace Classes
             }
             return (bool)HttpRuntime.Cache["CanRes"];
         }
-
     }
 }

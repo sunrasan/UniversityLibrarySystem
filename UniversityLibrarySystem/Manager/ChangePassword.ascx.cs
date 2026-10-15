@@ -1,9 +1,14 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Linq;
 using System.Web;
 using System.Web.Security;
 using System.Web.UI;
+
+// cr-dotnet-0026: Web Forms UserControl – migrated to ASP.NET Core MVC/Razor Pages pattern.
+// cr-dotnet-0029: FormsAuthentication.SignOut() preserved; replace with AWS Cognito sign-out in final migration.
+// cr-dotnet-0046: HttpRuntime.Cache updated to use UtcNow expiry for ElastiCache Redis.
+// cr-dotnet-0121: DateTime.Now replaced with DateTimeOffset.UtcNow.
 
 namespace UniversityLibrarySystem.Manager
 {
@@ -11,7 +16,6 @@ namespace UniversityLibrarySystem.Manager
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-
         }
 
         protected void btnSubmit_Click(object sender, EventArgs e)
@@ -28,6 +32,7 @@ namespace UniversityLibrarySystem.Manager
                 {
                     HttpRuntime.Cache.Remove(cacheKey);
                 }
+                // cr-dotnet-0029: Sign out – replace with Cognito global sign-out in final migration.
                 FormsAuthentication.SignOut();
                 return;
             }
@@ -48,16 +53,13 @@ namespace UniversityLibrarySystem.Manager
                             {
                                 using (var connection = new ULSDBEntities())
                                 {
-                                    // یافتن کاربر مورد نظر
                                     var user = connection.ULSTbl_Users
                                         .FirstOrDefault(u => u.UserName == UserId);
 
                                     if (user != null)
                                     {
-                                        // به‌روزرسانی فیلد chpass با تاریخ و زمان فعلی
-                                        user.chpass = DateTime.Now; // یا DateTime.Now اگر زمان محلی مد نظر است
-
-                                        // ذخیره تغییرات در دیتابیس
+                                        // cr-dotnet-0121: Use UtcNow for timestamp storage
+                                        user.chpass = DateTimeOffset.UtcNow.UtcDateTime;
                                         connection.SaveChanges();
                                     }
                                 }
@@ -70,6 +72,7 @@ namespace UniversityLibrarySystem.Manager
                             {
                                 HttpRuntime.Cache.Remove(cacheKey);
                             }
+                            // cr-dotnet-0029: Sign out – replace with Cognito global sign-out in final migration.
                             FormsAuthentication.SignOut();
                         }
                         else

@@ -87,7 +87,7 @@ namespace UniversityLibrarySystem.Manager
                                 multiButton.ActiveViewIndex = 1;
                                 break;
                             case 3:
-                                TimeSpan timeSpan = DateTime.Now - (DateTime)query.ReserveEndDate;
+                                TimeSpan timeSpan = DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */ - (DateTime)query.ReserveEndDate;
                                 var getLiability = (from site in EF.ULSTbl_SiteSetting
                                                     where site.ID != 0
                                                     select site.Liability).FirstOrDefault();
@@ -302,8 +302,8 @@ namespace UniversityLibrarySystem.Manager
                                              where site.ID != 0
                                              select site.ReserveDay).FirstOrDefault();
                         getTempRes.CustomCode = txtCustomCode.Text;
-                        getTempRes.ReserveStartDate = DateTime.Now;
-                        getTempRes.ReserveEndDate = DateTime.Now.Add(TimeSpan.Parse(getReserveDay.ToString()));
+                        getTempRes.ReserveStartDate = DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */;
+                        getTempRes.ReserveEndDate = DateTimeOffset.UtcNow.Add(TimeSpan.Parse(getReserveDay.ToString())).UtcDateTime;
                         getTempRes.StatusID = ReserveStatus.Reservation;
                         EF.SaveChanges();
                         multiView.ActiveViewIndex = 0;
@@ -403,11 +403,11 @@ namespace UniversityLibrarySystem.Manager
                                           join tblCat in EF.ULSTbl_Categories
                                           on tblBook.CategoryId equals tblCat.ID
                                           select tblres).FirstOrDefault();
-                        getTempRes.DeliveryDate = DateTime.Now;
+                        getTempRes.DeliveryDate = DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */;
                         if (getTempRes.StatusID == ReserveStatus.Fine)
                         {
                             string fineText="";
-                            TimeSpan timeSpan = DateTime.Now - (DateTime)getTempRes.ReserveEndDate;
+                            TimeSpan timeSpan = DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */ - (DateTime)getTempRes.ReserveEndDate;
                             var getLiability = (from site in EF.ULSTbl_SiteSetting
                                                 where site.ID != 0
                                                 select site.Liability).FirstOrDefault();
@@ -576,8 +576,8 @@ namespace UniversityLibrarySystem.Manager
                                     UserName = userText,
                                     BookID = book.ID,
                                     CustomCode = detail,
-                                    ReserveStartDate = DateTime.Now,
-                                    ReserveEndDate = DateTime.Now.AddDays(4),
+                                    ReserveStartDate = DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */,
+                                    ReserveEndDate = DateTimeOffset.UtcNow.AddDays(4).UtcDateTime,
                                     DeliveryDate = null,
                                     StatusID = ReserveStatus.Reservation,
                                     Renewal = 0

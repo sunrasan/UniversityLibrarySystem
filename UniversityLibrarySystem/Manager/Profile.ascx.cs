@@ -55,7 +55,7 @@ namespace UniversityLibrarySystem.Manager
                         if (fileUploadPic.HasFile)//آیا تصویری را انتخاب نموده؟
                         {
                             string extension = Path.GetExtension(fileUploadPic.FileName);
-                            string PicName = Guid.NewGuid().ToString() + DateTime.Now.ToString("-yyyyM-MddHH-mmss") + extension;
+                            string PicName = Guid.NewGuid().ToString() + DateTimeOffset.UtcNow.ToString("-yyyyM-MddHH-mmss") + extension;
                             fileUploadPic.SaveAs(Server.MapPath("../img/users") + "//" + PicName);
                             if (qGetUser.PicName != "no-photo.png" && qGetUser.PicName != "user.png")
                             {

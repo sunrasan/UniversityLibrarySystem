@@ -66,7 +66,7 @@ namespace UniversityLibrarySystem
                     {
                         var qGetAbout = (from item in EF.ULSTbl_SiteSetting
                                          select item).FirstOrDefault();
-                        HttpRuntime.Cache.Insert("ShortAboutUs", qGetAbout.ShortAboutUs, null, DateTime.Now.AddDays(1), System.Web.Caching.Cache.NoSlidingExpiration);
+                        HttpRuntime.Cache.Insert("ShortAboutUs", qGetAbout.ShortAboutUs, null, DateTimeOffset.UtcNow.AddDays(1).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration); // cr-dotnet-0121: Use UtcNow
                         result = qGetAbout.ShortAboutUs;
                     }
                 }

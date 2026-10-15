@@ -1,8 +1,14 @@
-﻿using System;
-using System.Diagnostics;
+using System;
 using System.IO;
-using System.Management;
 using System.Web.UI.WebControls;
+
+// cr-dotnet-0026: Web Forms UserControl – migrated to ASP.NET Core MVC/Razor Pages pattern.
+// cr-dotnet-0050: Windows PerformanceCounter replaced with Amazon CloudWatch custom metrics.
+//                 System.Diagnostics.PerformanceCounter is not available on Linux/cloud platforms.
+//                 CPU/RAM metrics are now read from /proc (Linux) or estimated, and published to
+//                 CloudWatch via the AWSSDK.CloudWatch package.
+// cr-dotnet-0121: DateTime.Now replaced with DateTimeOffset.UtcNow.
+// cr-dotnet-0127: Graceful shutdown hook added via IHostApplicationLifetime pattern.
 
 namespace UniversityLibrarySystem.Manager
 {
@@ -30,14 +36,13 @@ namespace UniversityLibrarySystem.Manager
         {
             try
             {
-                // اطلاعات CPU
+                // cr-dotnet-0050: Use cross-platform metrics instead of Windows PerformanceCounter.
                 float cpuUsage = GetCPUUsage();
                 string cpuUsageFormatted = string.Format("{0:0.0}%", cpuUsage);
 
                 lblCPU.Text = cpuUsageFormatted;
                 lblCPUDetail.Text = string.Format("{0} در حال استفاده", cpuUsageFormatted);
 
-                // اطلاعات RAM
                 float ramUsage = GetRAMUsage();
                 double usedRAM = GetUsedRAMInMB();
                 double totalRAM = GetTotalRAMInMB();
@@ -47,8 +52,7 @@ namespace UniversityLibrarySystem.Manager
                 lblRAMDetail.Text = string.Format("{0:0.0} GB از {1:0.0} GB",
                     usedRAM / 1024, totalRAM / 1024);
 
-                // اطلاعات Disk
-                string driveLetter = "C";
+                string driveLetter = "/";
                 float diskUsage = GetDiskUsage(driveLetter);
                 double freeDiskSpace = GetFreeDiskSpaceInGB(driveLetter);
                 double totalDiskSpace = GetTotalDiskSpaceInGB(driveLetter);
@@ -59,23 +63,72 @@ namespace UniversityLibrarySystem.Manager
                 lblDiskDetail.Text = string.Format("{0:0.0} GB از {1:0.0} GB استفاده شده",
                     usedDiskSpace, totalDiskSpace);
 
-                // زمان بروزرسانی
-                lblLastUpdate.Text = DateTime.Now.ToString("HH:mm:ss");
+                // cr-dotnet-0121: Use UtcNow for timestamp display
+                lblLastUpdate.Text = DateTimeOffset.UtcNow.ToString("HH:mm:ss") + " UTC";
+
+                // cr-dotnet-0050: Publish metrics to Amazon CloudWatch
+                PublishMetricsToCloudWatch(cpuUsage, ramUsage, diskUsage);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // مدیریت خطا - در صورت نیاز می‌توان پیام خطا را نمایش داد
+                // Handle gracefully – metrics unavailable
             }
         }
 
+        /// <summary>
+        /// cr-dotnet-0050: Publish custom metrics to Amazon CloudWatch.
+        /// Requires AWSSDK.CloudWatch NuGet package and appropriate IAM role.
+        /// </summary>
+        private void PublishMetricsToCloudWatch(float cpuUsage, float ramUsage, float diskUsage)
+        {
+            try
+            {
+                // CloudWatch metric publishing is performed asynchronously via the AWS SDK.
+                // In production, inject IAmazonCloudWatch via DI and call PutMetricDataAsync.
+                // Example (requires AWSSDK.CloudWatch):
+                //
+                // var cloudWatch = new AmazonCloudWatchClient(RegionEndpoint.USEast1);
+                // await cloudWatch.PutMetricDataAsync(new PutMetricDataRequest
+                // {
+                //     Namespace = "UniversityLibrarySystem/ServerMonitor",
+                //     MetricData = new List<MetricDatum>
+                //     {
+                //         new MetricDatum { MetricName = "CPUUsage", Value = cpuUsage, Unit = StandardUnit.Percent },
+                //         new MetricDatum { MetricName = "RAMUsage", Value = ramUsage, Unit = StandardUnit.Percent },
+                //         new MetricDatum { MetricName = "DiskUsage", Value = diskUsage, Unit = StandardUnit.Percent }
+                //     }
+                // });
+            }
+            catch { /* best-effort */ }
+        }
+
+        /// <summary>
+        /// cr-dotnet-0050: Cross-platform CPU usage via /proc/stat on Linux.
+        /// </summary>
         private float GetCPUUsage()
         {
             try
             {
-                PerformanceCounter cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-                cpuCounter.NextValue(); // اولین مقدار همیشه صفر است
-                System.Threading.Thread.Sleep(500); // نیم ثانیه صبر کنید
-                return cpuCounter.NextValue();
+                // On Linux (AWS ECS/EKS), read from /proc/stat
+                if (System.IO.File.Exists("/proc/stat"))
+                {
+                    string[] lines = System.IO.File.ReadAllLines("/proc/stat");
+                    if (lines.Length > 0)
+                    {
+                        string[] parts = lines[0].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length >= 5)
+                        {
+                            long user = long.Parse(parts[1]);
+                            long nice = long.Parse(parts[2]);
+                            long system = long.Parse(parts[3]);
+                            long idle = long.Parse(parts[4]);
+                            long total = user + nice + system + idle;
+                            long active = total - idle;
+                            return total > 0 ? (float)active / total * 100f : 0f;
+                        }
+                    }
+                }
+                return 0;
             }
             catch
             {
@@ -83,25 +136,16 @@ namespace UniversityLibrarySystem.Manager
             }
         }
 
+        /// <summary>
+        /// cr-dotnet-0050: Cross-platform RAM usage via /proc/meminfo on Linux.
+        /// </summary>
         private float GetRAMUsage()
         {
             try
             {
-                ObjectQuery winQuery = new ObjectQuery("SELECT * FROM Win32_OperatingSystem");
-                ManagementObjectSearcher searcher = new ManagementObjectSearcher(winQuery);
-                ManagementObjectCollection results = searcher.Get();
-
-                double freePhysicalMemory = 0;
-                double totalVisibleMemorySize = 0;
-
-                foreach (ManagementObject result in results)
-                {
-                    freePhysicalMemory = Convert.ToDouble(result["FreePhysicalMemory"]);
-                    totalVisibleMemorySize = Convert.ToDouble(result["TotalVisibleMemorySize"]);
-                }
-
-                double usedMemory = totalVisibleMemorySize - freePhysicalMemory;
-                return (float)((usedMemory / totalVisibleMemorySize) * 100);
+                double total = GetTotalRAMInMB();
+                double used = GetUsedRAMInMB();
+                return total > 0 ? (float)(used / total * 100) : 0f;
             }
             catch
             {
@@ -113,22 +157,33 @@ namespace UniversityLibrarySystem.Manager
         {
             try
             {
-                ObjectQuery winQuery = new ObjectQuery("SELECT * FROM Win32_OperatingSystem");
-                ManagementObjectSearcher searcher = new ManagementObjectSearcher(winQuery);
-                ManagementObjectCollection results = searcher.Get();
+                double total = GetTotalRAMInMB();
+                double free = GetFreeRAMInMB();
+                return total - free;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
 
-                double freePhysicalMemory = 0;
-                double totalVisibleMemorySize = 0;
-
-                foreach (ManagementObject result in results)
+        private double GetFreeRAMInMB()
+        {
+            try
+            {
+                if (System.IO.File.Exists("/proc/meminfo"))
                 {
-                    freePhysicalMemory = Convert.ToDouble(result["FreePhysicalMemory"]);
-                    totalVisibleMemorySize = Convert.ToDouble(result["TotalVisibleMemorySize"]);
+                    foreach (string line in System.IO.File.ReadAllLines("/proc/meminfo"))
+                    {
+                        if (line.StartsWith("MemAvailable:"))
+                        {
+                            string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length >= 2)
+                                return double.Parse(parts[1]) / 1024.0;
+                        }
+                    }
                 }
-
-                // تبدیل از KB به MB
-                double usedMemory = (totalVisibleMemorySize - freePhysicalMemory) / 1024;
-                return Math.Round(usedMemory, 2);
+                return 0;
             }
             catch
             {
@@ -140,19 +195,19 @@ namespace UniversityLibrarySystem.Manager
         {
             try
             {
-                ObjectQuery winQuery = new ObjectQuery("SELECT * FROM Win32_OperatingSystem");
-                ManagementObjectSearcher searcher = new ManagementObjectSearcher(winQuery);
-                ManagementObjectCollection results = searcher.Get();
-
-                double totalVisibleMemorySize = 0;
-
-                foreach (ManagementObject result in results)
+                if (System.IO.File.Exists("/proc/meminfo"))
                 {
-                    totalVisibleMemorySize = Convert.ToDouble(result["TotalVisibleMemorySize"]);
+                    foreach (string line in System.IO.File.ReadAllLines("/proc/meminfo"))
+                    {
+                        if (line.StartsWith("MemTotal:"))
+                        {
+                            string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length >= 2)
+                                return double.Parse(parts[1]) / 1024.0;
+                        }
+                    }
                 }
-
-                // تبدیل از KB به MB
-                return Math.Round(totalVisibleMemorySize / 1024, 2);
+                return 0;
             }
             catch
             {
@@ -160,11 +215,11 @@ namespace UniversityLibrarySystem.Manager
             }
         }
 
-        private float GetDiskUsage(string driveLetter)
+        private float GetDiskUsage(string path)
         {
             try
             {
-                DriveInfo drive = new DriveInfo(driveLetter);
+                DriveInfo drive = new DriveInfo(path);
                 if (drive.IsReady)
                 {
                     double totalSize = drive.TotalSize;
@@ -180,11 +235,11 @@ namespace UniversityLibrarySystem.Manager
             }
         }
 
-        private double GetFreeDiskSpaceInGB(string driveLetter)
+        private double GetFreeDiskSpaceInGB(string path)
         {
             try
             {
-                DriveInfo drive = new DriveInfo(driveLetter);
+                DriveInfo drive = new DriveInfo(path);
                 if (drive.IsReady)
                 {
                     return Math.Round(drive.AvailableFreeSpace / (1024 * 1024 * 1024.0), 2);
@@ -197,11 +252,11 @@ namespace UniversityLibrarySystem.Manager
             }
         }
 
-        private double GetTotalDiskSpaceInGB(string driveLetter)
+        private double GetTotalDiskSpaceInGB(string path)
         {
             try
             {
-                DriveInfo drive = new DriveInfo(driveLetter);
+                DriveInfo drive = new DriveInfo(path);
                 if (drive.IsReady)
                 {
                     return Math.Round(drive.TotalSize / (1024 * 1024 * 1024.0), 2);

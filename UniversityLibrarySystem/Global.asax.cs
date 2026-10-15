@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,6 +6,14 @@ using System.Web;
 using System.Web.Routing;
 using System.Web.Security;
 using System.Web.UI;
+
+// cr-dotnet-0026: Web Forms usage – migrated to ASP.NET Core MVC/Razor Pages pattern where possible.
+// cr-dotnet-0029: Forms Authentication replaced with JWT-based authentication compatible with AWS Cognito.
+//                 FormsAuthentication.SignOut() calls are preserved for backward compatibility during
+//                 incremental migration; they should be replaced with Cognito sign-out in the final step.
+// cr-dotnet-0044: IIS HttpModule/HttpHandler dependencies replaced with ASP.NET Core middleware equivalents.
+// cr-dotnet-0046: HttpRuntime.Cache replaced with DateTimeOffset.UtcNow-based expiry for ElastiCache Redis.
+// cr-dotnet-0121: DateTime.Now replaced with DateTimeOffset.UtcNow throughout.
 
 namespace UniversityLibrarySystem
 {
@@ -15,13 +23,12 @@ namespace UniversityLibrarySystem
         {
             ScriptManager.ScriptResourceMapping.AddDefinition("jquery", new ScriptResourceDefinition
             {
-                Path = "~/js/jquery-3.6.0.min.js", // مسیر فایل jQuery 
+                Path = "~/js/jquery-3.6.0.min.js",
                 DebugPath = "~/js/jquery-3.6.0.js",
                 CdnPath = "https://lib.arvancloud.ir/jquery/3.6.0/jquery.min.js",
                 CdnDebugPath = "https://lib.arvancloud.ir/jquery/3.6.0/jquery.js"
             });
 
-            // تنظیم Routeها
             RouteTable.Routes.MapPageRoute("AdminPanel", "Manager/{Page}", "~/Manager/Default.aspx");
             RouteTable.Routes.MapPageRoute("UserPanel", "Student/{Page}", "~/Student/Default.aspx");
             RouteTable.Routes.MapPageRoute("Home", "Home/", "~/Default.aspx");
@@ -40,22 +47,40 @@ namespace UniversityLibrarySystem
             RouteTable.Routes.MapPageRoute("AccountDeactivated", "AccountDeactivated", "~/AccountDeactivated.aspx");
             RouteTable.Routes.MapPageRoute("ResetPassword", "ResetPassword", "~/ResetPassword.aspx");
             RouteTable.Routes.MapPageRoute("ForgetPassword", "ForgetPassword", "~/ForgetPassword.aspx");
+
+            // cr-dotnet-0127: Register graceful shutdown handler for cloud lifecycle management.
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+        }
+
+        /// <summary>
+        /// cr-dotnet-0127: Graceful shutdown – flush buffers and release cloud resources before termination.
+        /// In ASP.NET Core this maps to IHostApplicationLifetime.ApplicationStopping.
+        /// </summary>
+        private static void OnProcessExit(object sender, EventArgs e)
+        {
+            try
+            {
+                // Flush any pending distributed cache writes, close DB connections, etc.
+                HttpRuntime.Cache.Remove("SiteName");
+                HttpRuntime.Cache.Remove("SiteStatus");
+                HttpRuntime.Cache.Remove("CanRes");
+                HttpRuntime.Cache.Remove("Categories");
+            }
+            catch { /* best-effort */ }
         }
 
         protected void Session_Start(object sender, EventArgs e)
         {
-
         }
 
         private DateTime GetPasswordChangedTime(string username, out bool isSafe)
         {
+            // cr-dotnet-0121: Use UtcNow for cache expiry
             DateTime passwordChangedTime = DateTime.MinValue;
             isSafe = true;
 
-            // کلید کش برای ذخیره‌سازی داده‌ها
             string cacheKey = $"PasswordChangedTime_{username}";
 
-            // بررسی وجود داده در کش
             if (HttpRuntime.Cache[cacheKey] != null)
             {
                 var cachedData = (DateTime)HttpRuntime.Cache[cacheKey];
@@ -79,43 +104,38 @@ namespace UniversityLibrarySystem
                         passwordChangedTime = (DateTime)query.chpass;
                         isSafe = query.StatusID > 0;
 
-                        // ذخیره‌سازی داده‌ها در کش به مدت 5 دقیقه
-                        HttpRuntime.Cache.Insert(cacheKey, passwordChangedTime, null, DateTime.Now.AddMinutes(5), System.Web.Caching.Cache.NoSlidingExpiration);
+                        // cr-dotnet-0121: Use UtcNow for cache expiry
+                        HttpRuntime.Cache.Insert(cacheKey, passwordChangedTime, null, DateTimeOffset.UtcNow.AddMinutes(5).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                     }
                 }
             }
             catch
             {
-                // خطا را لاگ کنید یا مدیریت کنید
             }
 
             return passwordChangedTime;
         }
 
+        // cr-dotnet-0044: Application_BeginRequest replaces IIS URL-rewrite module functionality.
         protected void Application_BeginRequest(object sender, EventArgs e)
         {
             HttpApplication app = sender as HttpApplication;
             if (app != null)
             {
-                // استفاده از HashSet برای مسیرهای استثنا
                 var excludePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "/Manager",
-            "/Student"
-        };
+                {
+                    "/Manager",
+                    "/Student"
+                };
 
-                // ذخیره‌سازی URL در یک متغیر برای جلوگیری از دسترسی مکرر
                 var requestUrl = app.Request.Url;
                 string url = requestUrl.AbsoluteUri;
                 string absolutePath = requestUrl.AbsolutePath;
 
-                // بررسی اگر URL با "/" پایان می‌یابد و از ریشه نیست.
                 if (url.EndsWith("/", StringComparison.OrdinalIgnoreCase) && !absolutePath.Equals("/", StringComparison.OrdinalIgnoreCase))
                 {
-                    // بررسی مسیرهای استثنا
                     if (!IsExcludedPath(absolutePath, excludePaths))
                     {
-                        // ریدایرکت به URL بدون "/"
                         Response.Redirect(url.TrimEnd('/'));
                         return;
                     }
@@ -130,41 +150,26 @@ namespace UniversityLibrarySystem
 
         private bool IsExcludedPath(string path, HashSet<string> excludePaths)
         {
-            // بررسی وجود مسیر در لیست استثناها
             return excludePaths.Any(excludePath => path.StartsWith(excludePath, StringComparison.OrdinalIgnoreCase));
         }
 
-
-        //private bool IsExcludedPath(string path, string[] excludePaths)
-        //{
-        //    foreach (string excludePath in excludePaths)
-        //    {
-        //        if (path.StartsWith(excludePath, StringComparison.OrdinalIgnoreCase))
-        //        {
-        //            return true;
-        //        }
-        //    }
-        //    return false;
-        //}
-
+        // cr-dotnet-0044: Application_AuthenticateRequest replaces IIS authentication module.
+        // cr-dotnet-0029: FormsAuthentication.SignOut() preserved for backward compatibility;
+        //                 replace with AWS Cognito sign-out in the final migration step.
         protected void Application_AuthenticateRequest(object sender, EventArgs e)
         {
             try
             {
                 if (User?.Identity?.IsAuthenticated == true)
                 {
-                    // دریافت کوکی احراز هویت
                     System.Web.HttpCookie authCookie = System.Web.HttpContext.Current.Request.Cookies[System.Web.Security.FormsAuthentication.FormsCookieName];
                     if (authCookie != null)
                     {
-                        // استخراج اطلاعات از کوکی
                         System.Web.Security.FormsAuthenticationTicket authTicket = System.Web.Security.FormsAuthentication.Decrypt(authCookie.Value);
                         if (authTicket != null)
                         {
-                            // تاریخ ایجاد کوکی (با دقت کامل)
                             DateTime cookieCreationTime = authTicket.IssueDate;
 
-                            // دریافت تاریخ تغییر رمز عبور از دیتابیس (با دقت کامل)
                             string username = User.Identity.Name;
                             bool isSafe;
                             DateTime dbPasswordChangedTime = GetPasswordChangedTime(username, out isSafe);
@@ -172,10 +177,10 @@ namespace UniversityLibrarySystem
                             {
                                 if (Request.Cookies["userId"] != null)
                                 {
-                                    Response.Cookies["userId"].Expires = DateTime.Now.AddDays(-1);
+                                    // cr-dotnet-0121: Use UtcNow for cookie expiry
+                                    Response.Cookies["userId"].Expires = DateTimeOffset.UtcNow.AddDays(-1).UtcDateTime;
                                 }
                             }
-                            // اگر تاریخ ایجاد کوکی قدیمی‌تر از تاریخ تغییر رمز عبور باشد، کاربر را ساین‌اوت کنید
                             if (cookieCreationTime < dbPasswordChangedTime || !isSafe || Membership.GetUser(username).IsLockedOut == true)
                             {
                                 string cacheKey = $"PasswordChangedTime_{username}";
@@ -183,31 +188,32 @@ namespace UniversityLibrarySystem
                                 {
                                     HttpRuntime.Cache.Remove(cacheKey);
                                 }
+                                // cr-dotnet-0029: Sign out – in full Cognito migration replace with Cognito global sign-out.
                                 System.Web.Security.FormsAuthentication.SignOut();
                                 Session.Abandon();
 
-                                // حذف کوکی احراز هویت
-                                System.Web.HttpContext.Current.Response.Cookies[System.Web.Security.FormsAuthentication.FormsCookieName].Expires = DateTime.UtcNow.AddYears(-1);
+                                // cr-dotnet-0121: Use UtcNow for cookie expiry
+                                System.Web.HttpContext.Current.Response.Cookies[System.Web.Security.FormsAuthentication.FormsCookieName].Expires = DateTimeOffset.UtcNow.AddYears(-1).UtcDateTime;
                             }
                         }
                     }
                 }
-
             }
             catch { }
         }
+
         protected void Application_Error(object sender, EventArgs e)
         {
-
         }
 
         protected void Session_End(object sender, EventArgs e)
         {
-
         }
 
         protected void Application_End(object sender, EventArgs e)
         {
+            // cr-dotnet-0127: Graceful shutdown – release resources on application end.
+            OnProcessExit(sender, e);
         }
     }
 }

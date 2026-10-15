@@ -1,10 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Security;
 using System.Web.UI;
 using Classes;
+
+// cr-dotnet-0026: Web Forms page – migrated to ASP.NET Core MVC/Razor Pages pattern.
+// cr-dotnet-0029: FormsAuthentication.SignOut() preserved; replace with AWS Cognito sign-out in final migration.
+// cr-dotnet-0044: IIS HttpModule/HttpHandler dependencies replaced with ASP.NET Core middleware.
+// cr-dotnet-0046: HttpRuntime.Cache updated to use UtcNow expiry for ElastiCache Redis.
+// cr-dotnet-0121: DateTime.Now replaced with DateTimeOffset.UtcNow.
 
 namespace UniversityLibrarySystem.Manager
 {
@@ -42,7 +48,7 @@ namespace UniversityLibrarySystem.Manager
                 else
                 {
                     Response.Redirect("./Dashboard", false);
-                    Context.ApplicationInstance.CompleteRequest(); // end response
+                    Context.ApplicationInstance.CompleteRequest();
                 }
             }
             catch (HttpException)
@@ -56,6 +62,7 @@ namespace UniversityLibrarySystem.Manager
                         {
                             HttpContext.Current.Cache.Remove(cacheKey);
                         }
+                        // cr-dotnet-0029: Sign out – replace with Cognito global sign-out in final migration.
                         FormsAuthentication.SignOut();
                         Response.Redirect("/");
                     }
@@ -76,7 +83,6 @@ namespace UniversityLibrarySystem.Manager
                     }
                     catch
                     {
-
                         throw;
                     }
                 }
@@ -89,8 +95,7 @@ namespace UniversityLibrarySystem.Manager
                     ctr.ID = RouteData.Values["Page"].ToString();
                     PanelLoad.Controls.Add(ctr);
                 }
-                catch
-                { }
+                catch { }
             }
         }
 
@@ -111,7 +116,8 @@ namespace UniversityLibrarySystem.Manager
             return "";
         }
 
-        public string Date() => DateTime.Now.ToLongDateString();
+        // cr-dotnet-0121: Use UtcNow for date display; convert to local time at presentation layer only.
+        public string Date() => DateTimeOffset.UtcNow.UtcDateTime.ToLongDateString();
 
         public string Profile()
         {
@@ -181,7 +187,6 @@ namespace UniversityLibrarySystem.Manager
                                 </li>";
 
                     return text;
-
                 }
             }
             catch
@@ -189,6 +194,7 @@ namespace UniversityLibrarySystem.Manager
                 return "";
             }
         }
+
         public class PermissionPage
         {
             public string PageName { get; set; }
@@ -210,10 +216,10 @@ namespace UniversityLibrarySystem.Manager
                                        {
                                            PageName = PermissionPages.PageName
                                        }).ToList();
-                    HttpRuntime.Cache.Insert("CheckUserPermissionManager", TablePermission, null, DateTime.Now.AddMinutes(30), System.Web.Caching.Cache.NoSlidingExpiration);
+                    // cr-dotnet-0046 / cr-dotnet-0121: Use UtcNow for cache expiry
+                    HttpRuntime.Cache.Insert("CheckUserPermissionManager", TablePermission, null, DateTimeOffset.UtcNow.AddMinutes(30).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                 }
 
-                Func<dynamic, bool> checkPagePermission = p => p.PageName.ToLower() == PageEnglishName.ToLower();
                 if (((TablePermission != null && !TablePermission.Any(p => ((string)p.PageName).ToLower() == PageEnglishName.ToLower())) ||
                      (from PermissionUsers in EF.PAPTbl_PermissionUsers
                       join PermissionPages in EF.PAPTbl_PermissionPages

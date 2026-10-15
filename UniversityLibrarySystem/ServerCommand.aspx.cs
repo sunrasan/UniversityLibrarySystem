@@ -12,7 +12,7 @@ namespace UniversityLibrarySystem
         {
             if (Request.QueryString["bc0b6b2d-1839-462c-837b-fe71ac128e78"] == "68868060-69a6-4bb0-8f3e-590ffa57070b")
             {
-                Response.Write("StartProcess:" + DateTime.Now + "<br/>Command:Check");
+                Response.Write("StartProcess:" + DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */ + "<br/>Command:Check");
                 try
                 {
                     using (var context = new ULSDBEntities())
@@ -21,7 +21,7 @@ namespace UniversityLibrarySystem
                         context.Configuration.LazyLoadingEnabled = false;
                         context.Configuration.ProxyCreationEnabled = false;
 
-                        var currentDate = DateTime.Now;
+                        var currentDate = DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */;
 
                         // بهینه‌سازی کوئری: استفاده از Include برای جلوگیری از SELECTهای اضافی
                         var getTempRes = (from tblres in context.ULSTbl_Reserve
@@ -83,11 +83,11 @@ namespace UniversityLibrarySystem
                     }
                     Response.Write(errorMessage + "<br/>StackTrace:" + ex.StackTrace);
                 }
-                Response.Write("<br/>EndProcess:" + DateTime.Now);
+                Response.Write("<br/>EndProcess:" + DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */);
             }
             else if (Request.QueryString["bd0b6b2d-1839-462c-837b-fe71ac128e78"] == "67868060-69a6-4bd0-8f3e-590ffa57070b")
             {
-                Response.Write("StartProcess:" + DateTime.Now + "<br/>Command:Change Status");
+                Response.Write("StartProcess:" + DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */ + "<br/>Command:Change Status");
                 try
                 {
                     using (var context = new ULSDBEntities())
@@ -120,7 +120,7 @@ namespace UniversityLibrarySystem
                     }
                     Response.Write(errorMessage + "<br/>StackTrace:" + ex.StackTrace);
                 }
-                Response.Write("<br/>EndProcess:" + DateTime.Now);
+                Response.Write("<br/>EndProcess:" + DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */);
             }
             else
             {

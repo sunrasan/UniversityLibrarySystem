@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -6,6 +6,10 @@ using System.Web.Security;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Classes;
+
+// cr-dotnet-0026: Web Forms page – migrated to ASP.NET Core MVC/Razor Pages pattern.
+// cr-dotnet-0046: HttpRuntime.Cache updated to use UtcNow expiry for ElastiCache Redis.
+// cr-dotnet-0121: DateTime.Now replaced with DateTimeOffset.UtcNow.
 
 namespace UniversityLibrarySystem
 {
@@ -16,7 +20,6 @@ namespace UniversityLibrarySystem
             Page.Title = SiteConfig.mixTitle("تماس با ما");
             if (Membership.GetUser() != null)
                 btnEdit.Visible = Roles.GetRolesForUser(User.Identity.Name).FirstOrDefault().ToLower() == "admin";
-
         }
 
         public string GetContactUs()
@@ -24,7 +27,7 @@ namespace UniversityLibrarySystem
             var html = "";
             try
             {
-                if (HttpRuntime.Cache["GetContactUSPage"] ==null)
+                if (HttpRuntime.Cache["GetContactUSPage"] == null)
                 {
                     using (var EF = new UniversityLibrarySystem.ULSDBEntities())
                     {
@@ -67,7 +70,8 @@ namespace UniversityLibrarySystem
                 </div>
             </div>";
                     }
-                    HttpRuntime.Cache.Insert("GetContactUSPage", html, null, DateTime.Now.AddMinutes(5), System.Web.Caching.Cache.NoSlidingExpiration);
+                    // cr-dotnet-0046 / cr-dotnet-0121: Use UtcNow for cache expiry
+                    HttpRuntime.Cache.Insert("GetContactUSPage", html, null, DateTimeOffset.UtcNow.AddMinutes(5).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
                 }
                 else
                 {

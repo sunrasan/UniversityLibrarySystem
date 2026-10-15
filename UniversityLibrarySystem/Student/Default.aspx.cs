@@ -69,7 +69,7 @@ namespace UniversityLibrarySystem.Student
             }
         }
 
-        public string Date() => DateTime.Now.ToLongDateString();
+        public string Date() => DateTimeOffset.UtcNow.UtcDateTime.ToLongDateString();
 
         public string Profile()
         {

@@ -209,7 +209,7 @@ namespace UniversityLibrarySystem.Manager
                         ULSTbl_Faq TG = new ULSTbl_Faq()
                         {
                             Answer = txtAnswer.Value,
-                            DateInsert = DateTime.Now,
+                            DateInsert = DateTimeOffset.UtcNow.UtcDateTime /* cr-dotnet-0121: Use UtcNow */,
                             Question = txtQuestion.Value,
                             UserNameAdder = UserId,
                             Status = Status

@@ -250,8 +250,8 @@ namespace UniversityLibrarySystem
                                 UserName = Membership.GetUser().UserName,
                                 BookID = id,
                                 CustomCode = null,
-                                ReserveStartDate = DateTime.Now,
-                                ReserveEndDate = DateTime.Now.AddDays(4),
+                                ReserveStartDate = DateTimeOffset.UtcNow.UtcDateTime, // cr-dotnet-0121: Use UtcNow
+                                ReserveEndDate = DateTimeOffset.UtcNow.AddDays(4).UtcDateTime, // cr-dotnet-0121: Use UtcNow
                                 DeliveryDate = null,
                                 StatusID = ReserveStatus.TempReservation,
                                 Renewal = 0

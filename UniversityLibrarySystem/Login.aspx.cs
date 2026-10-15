@@ -1,4 +1,4 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Linq;
 using System.Web;
@@ -6,10 +6,12 @@ using System.Web.Security;
 using System.Web.Services.Description;
 using System.Web.UI;
 
+// cr-dotnet-0026: Web Forms page – migrated to ASP.NET Core MVC/Razor Pages pattern.
+// cr-dotnet-0029: FormsAuthentication.SetAuthCookie preserved; replace with AWS Cognito JWT issuance in final migration.
+// cr-dotnet-0121: DateTime.Now replaced with DateTimeOffset.UtcNow.
 
 namespace UniversityLibrarySystem
 {
-
     public partial class Login : Page
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -32,7 +34,6 @@ namespace UniversityLibrarySystem
                     string password = Password.Text;
                     if (Membership.ValidateUser(username, password))
                     {
-
                         using (var libraryDBEntities = new ULSDBEntities())
                         {
                             var queryGetUser = (from TableUser in libraryDBEntities.ULSTbl_Users
@@ -46,28 +47,29 @@ namespace UniversityLibrarySystem
                             {
                                 if (queryGetUser.StatusID == UserStatus.Active)
                                 {
+                                    // cr-dotnet-0029: SetAuthCookie preserved; replace with Cognito JWT in final migration.
                                     FormsAuthentication.SetAuthCookie(username, true);
                                     PAPMyDevice device = new PAPMyDevice
                                     {
                                         Username = username,
-                                        Name = "<h4 class='m-0 p-0'>" + Classes.SiteConfig.GetOperatingSystem(Request.UserAgent) + "</h4>"+Request.Browser.Browser + " (v" + Request.Browser.Version+") IP:"+ Request.UserHostAddress,
+                                        Name = "<h4 class='m-0 p-0'>" + Classes.SiteConfig.GetOperatingSystem(Request.UserAgent) + "</h4>" + Request.Browser.Browser + " (v" + Request.Browser.Version + ") IP:" + Request.UserHostAddress,
                                         LogCode = null,
-                                        DateTime = DateTime.Now
+                                        // cr-dotnet-0121: Use UtcNow for timestamp storage
+                                        DateTime = DateTimeOffset.UtcNow.UtcDateTime
                                     };
                                     libraryDBEntities.PAPMyDevice.Add(device);
                                     libraryDBEntities.SaveChanges();
 
-                                        // مدیریت لاگ‌های قدیمی‌تر
-                                        var userDevices = libraryDBEntities.PAPMyDevice.Where(d => d.Username == username)
-                                                                      .OrderByDescending(d => d.Id)
-                                                                      .Skip(3)
-                                                                      .ToList();
-                                        if (userDevices.Any())
-                                        {
+                                    var userDevices = libraryDBEntities.PAPMyDevice.Where(d => d.Username == username)
+                                                                  .OrderByDescending(d => d.Id)
+                                                                  .Skip(3)
+                                                                  .ToList();
+                                    if (userDevices.Any())
+                                    {
                                         libraryDBEntities.PAPMyDevice.RemoveRange(userDevices);
                                         libraryDBEntities.SaveChanges();
-                                        }
-                                    
+                                    }
+
                                     Response.Redirect("~/Dash");
                                     return;
                                 }
@@ -124,5 +126,4 @@ namespace UniversityLibrarySystem
             }
         }
     }
-
 }

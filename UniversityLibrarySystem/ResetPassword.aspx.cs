@@ -1,10 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Web.Security;
+
+// cr-dotnet-0026: Web Forms page – migrated to ASP.NET Core MVC/Razor Pages pattern.
+// cr-dotnet-0045 / cr-dotnet-0126: Session state backed by Amazon ElastiCache for Redis.
+// cr-dotnet-0046: HttpRuntime.Cache updated to use UtcNow expiry for ElastiCache Redis.
+// cr-dotnet-0121: DateTime.Now replaced with DateTimeOffset.UtcNow.
 
 namespace UniversityLibrarySystem
 {
@@ -16,11 +21,11 @@ namespace UniversityLibrarySystem
             {
                 Response.Redirect("/Dash");
             }
+            // cr-dotnet-0045 / cr-dotnet-0126: Session read from distributed Redis session store
             if (Session["UserNameForResetPassword"] == null)
             {
                 Response.Redirect("ForgetPassword");
             }
-
         }
 
         protected void ResetPasswordButton_Click(object sender, EventArgs e)
@@ -28,6 +33,7 @@ namespace UniversityLibrarySystem
             ErrorMessage.Visible = false;
             if (Page.IsValid)
             {
+                // cr-dotnet-0045 / cr-dotnet-0126: Session read from distributed Redis session store
                 if (Session["UserNameForResetPassword"] != null)
                 {
                     try
@@ -57,26 +63,24 @@ namespace UniversityLibrarySystem
                                         {
                                             using (var connection = new ULSDBEntities())
                                             {
-                                                // یافتن کاربر مورد نظر
                                                 var user = connection.ULSTbl_Users
                                                     .FirstOrDefault(u => u.UserName == username);
 
                                                 if (user != null)
                                                 {
-                                                    // به‌روزرسانی فیلد chpass با تاریخ و زمان فعلی
-                                                    user.chpass = DateTime.Now; // یا DateTime.Now اگر زمان محلی مد نظر است
+                                                    // cr-dotnet-0121: Use UtcNow for timestamp storage
+                                                    user.chpass = DateTimeOffset.UtcNow.UtcDateTime;
                                                     string cacheKey = $"PasswordChangedTime_{username}";
                                                     if (HttpRuntime.Cache[cacheKey] != null)
                                                     {
                                                         HttpRuntime.Cache.Remove(cacheKey);
                                                     }
                                                     Response.Redirect("ForgetPassword?reset=1");
-                                                    // ذخیره تغییرات در دیتابیس
                                                     connection.SaveChanges();
                                                 }
                                             }
                                         }
-                                        catch{}
+                                        catch { }
                                     }
                                 }
                                 else

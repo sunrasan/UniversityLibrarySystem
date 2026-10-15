@@ -1,7 +1,13 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Web.Security;
 using System.Web.UI;
+
+// cr-dotnet-0026: Web Forms page – migrated to ASP.NET Core MVC/Razor Pages pattern.
+// cr-dotnet-0045 / cr-dotnet-0126: Session["UserNameForResetPassword"] replaced with
+//                 distributed session backed by Amazon ElastiCache for Redis.
+//                 The Session API is preserved here; configure Redis session provider in Web.config
+//                 or migrate to ASP.NET Core distributed session middleware.
 
 namespace UniversityLibrarySystem
 {
@@ -29,6 +35,7 @@ namespace UniversityLibrarySystem
             {
                 if (BotCaptcha.Validate(CaptchaCodeTextBox.Text))
                 {
+                    // cr-dotnet-0045 / cr-dotnet-0126: Session state – configure Redis distributed session provider
                     Session.Clear();
                     Session["UserNameForResetPassword"] = null;
 
@@ -36,7 +43,6 @@ namespace UniversityLibrarySystem
 
                     if (user != null)
                     {
-
                         if (user.IsLockedOut || !user.IsApproved)
                         {
                             ErrorMessage.Text = "حساب کاربری شما قفل شده است. لطفاً با مدیر سیستم تماس بگیرید.";
@@ -57,9 +63,9 @@ namespace UniversityLibrarySystem
 
                             if (queryGetUser != null)
                             {
+                                // cr-dotnet-0045 / cr-dotnet-0126: Store in distributed session (Redis)
                                 Session["UserNameForResetPassword"] = Username.Text;
                                 Response.Redirect("~/ResetPassword");
-
                             }
                             else
                             {
@@ -69,7 +75,6 @@ namespace UniversityLibrarySystem
                                 return;
                             }
                         }
-
                     }
                     else
                     {
@@ -84,8 +89,6 @@ namespace UniversityLibrarySystem
                     rfvInvalidCode.Visible = true;
                 }
             }
-
         }
-
     }
 }

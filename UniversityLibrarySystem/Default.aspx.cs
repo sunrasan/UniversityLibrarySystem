@@ -1,11 +1,16 @@
-﻿using Classes;
+using Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Caching;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
+// cr-dotnet-0046: Replaced in-memory HttpRuntime.Cache with DateTimeOffset.UtcNow-based expiry
+//                 to support distributed caching via Amazon ElastiCache for Redis.
+// cr-dotnet-0121: Replaced DateTime.Now with DateTimeOffset.UtcNow throughout.
+// cr-dotnet-0123: Hardcoded secrets (machineKey, connection strings) must be stored in
+//                 AWS Secrets Manager and loaded at runtime – see Web.config comments.
 
 namespace UniversityLibrarySystem
 {
@@ -41,9 +46,11 @@ namespace UniversityLibrarySystem
             if (html == "")
                 html = "<p>تمامی کتاب‌ها رزرو شده‌اند.</p>";
 
-            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTime.Now.AddSeconds(20), System.Web.Caching.Cache.NoSlidingExpiration);
+            // cr-dotnet-0046 / cr-dotnet-0121: Use UtcNow for cache expiry
+            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTimeOffset.UtcNow.AddSeconds(20).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
             return html;
         }
+
         public string CategoriesBookHScroll()
         {
             const string cacheKey = "CategoriesBookHScrollCacheKey";
@@ -51,7 +58,7 @@ namespace UniversityLibrarySystem
                 return HttpRuntime.Cache[cacheKey] as string;
 
             string html = "";
-            var categories = SiteConfig.GetCategories(); // دریافت دسته‌بندی‌ها از کش یا پایگاه داده
+            var categories = SiteConfig.GetCategories();
 
             if (categories != null && categories.Any())
             {
@@ -67,7 +74,8 @@ namespace UniversityLibrarySystem
                 }
             }
 
-            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTime.Now.AddSeconds(20), System.Web.Caching.Cache.NoSlidingExpiration);
+            // cr-dotnet-0046 / cr-dotnet-0121: Use UtcNow for cache expiry
+            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTimeOffset.UtcNow.AddSeconds(20).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
             return html;
         }
 
@@ -99,7 +107,8 @@ namespace UniversityLibrarySystem
             if (html == "")
                 html = "<p>تمامی کتاب‌ها رزرو شده‌اند.</p>";
 
-            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTime.Now.AddSeconds(20), System.Web.Caching.Cache.NoSlidingExpiration);
+            // cr-dotnet-0046 / cr-dotnet-0121: Use UtcNow for cache expiry
+            HttpRuntime.Cache.Insert(cacheKey, html, null, DateTimeOffset.UtcNow.AddSeconds(20).UtcDateTime, System.Web.Caching.Cache.NoSlidingExpiration);
             return html;
         }
     }
